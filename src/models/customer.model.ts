@@ -1,4 +1,4 @@
-import Address from "./adress.model";
+import Address from "./address.model";
 
 export default interface Customer {
   id: string;

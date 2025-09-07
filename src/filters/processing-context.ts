@@ -1,3 +1,7 @@
+import Customer from "../models/customer.model";
+import Product from "../models/product.model";
+
 export default interface ProcessingContext {
-  [key: string]: any;
+  customer?: Customer;
+  products: Product[];
 }

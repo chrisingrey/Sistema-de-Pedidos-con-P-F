@@ -1,4 +1,4 @@
-import OrderFilter from "../filters/order-filter";
+import OrderFilter from "../filters/order.filter";
 import Order from "../models/order.model";
 import PipelineConfig from "./pipeline-config";
 import PipelineResult from "./pipeline-result";
