@@ -19,14 +19,14 @@ export const process = (orderService: OrderService) => {
       result: {
         sucess: result.success,
         finalOrder: result.finalOrder,
+        executionTime: result.executionTime,
+        failedAt: result.failedAt,
         filterResults: result.filterResults.map((fr) => ({
           name: (fr as any).name,
           success: fr.success,
           errors: fr.errors,
           warning: fr.warnings,
         })),
-        executionTime: result.executionTime,
-        failedAt: result.failedAt,
       },
     });
   };
@@ -39,11 +39,11 @@ export const getOrderStatus = (orderService: OrderService) => {
     res.status(200).json({
       status: order.status,
       filterResults: filterResults.map((fr) => ({
-          name: (fr as any).name,
-          success: fr.success,
-          errors: fr.errors,
-          warning: fr.warnings,
-        })),
+        name: (fr as any).name,
+        success: fr.success,
+        errors: fr.errors,
+        warning: fr.warnings,
+      })),
     });
   };
 };

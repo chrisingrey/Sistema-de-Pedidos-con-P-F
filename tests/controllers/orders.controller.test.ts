@@ -23,8 +23,9 @@ describe("orders.controller - process", () => {
     orderService.processOrder.mockResolvedValue({
       success: true,
       finalOrder: { id: "1", status: "completed" },
-      filterResults: [{ name: "A", success: true, errors: [], warnings: [] }],
       executionTime: 10,
+      failedAt: undefined,
+      filterResults: [],
     });
     await process(orderService)(req as Request, res as Response);
     expect(orderService.processOrder).toHaveBeenCalledWith(req.body);
@@ -33,9 +34,257 @@ describe("orders.controller - process", () => {
       result: expect.objectContaining({
         sucess: true,
         finalOrder: { id: "1", status: "completed" },
-        filterResults: [expect.objectContaining({ name: "A", success: true })],
         executionTime: 10,
+        failedAt: undefined,
       }),
+    });
+  });
+
+  it("should fail on cliente inexistente (CustomerValidationFilter)", async () => {
+    req.body = { customerId: "cliente-invalido", items: [{ productId: "prod-101", quantity: 1 }] };
+    orderService.processOrder.mockResolvedValue({
+      success: false,
+      finalOrder: { id: "2", status: "rejected" },
+      filterResults: [
+        { name: "CustomerValidationFilter", success: false, errors: ["Cliente no encontrado"], warnings: [] }
+      ],
+      failedAt: "CustomerValidationFilter",
+      executionTime: 5,
+    });
+    await process(orderService)(req as Request, res as Response);
+    expect(orderService.processOrder).toHaveBeenCalledWith(req.body);
+    expect(statusMock).toHaveBeenCalledWith(200);
+    expect(jsonMock).toHaveBeenCalledWith({
+      result: expect.objectContaining({
+        sucess: false,
+        finalOrder: { id: "2", status: "rejected" },
+        failedAt: "CustomerValidationFilter",
+        filterResults: [
+          expect.objectContaining({
+            name: "CustomerValidationFilter",
+            success: false,
+            errors: expect.arrayContaining(["Cliente no encontrado"]),
+            warning: [],
+          })
+        ]
+      })
+    });
+  });
+
+  it("should fail on falta campo items (DataIntegrityFilter)", async () => {
+    req.body = { customerId: "cust-001" };
+    orderService.processOrder.mockResolvedValue({
+      success: false,
+      finalOrder: { id: "3", status: "rejected" },
+      filterResults: [
+        { name: "DataIntegrityFilter", success: false, errors: ["Faltan items"], warnings: [] }
+      ],
+      failedAt: "DataIntegrityFilter",
+      executionTime: 5,
+    });
+    await process(orderService)(req as Request, res as Response);
+    expect(orderService.processOrder).toHaveBeenCalledWith(req.body);
+    expect(statusMock).toHaveBeenCalledWith(200);
+    expect(jsonMock).toHaveBeenCalledWith({
+      result: expect.objectContaining({
+        sucess: false,
+        finalOrder: { id: "3", status: "rejected" },
+        failedAt: "DataIntegrityFilter",
+        filterResults: [
+          expect.objectContaining({
+            name: "DataIntegrityFilter",
+            success: false,
+            errors: expect.arrayContaining(["Faltan items"]),
+            warning: [],
+          })
+        ]
+      })
+    });
+  });
+
+  it("should fail on cantidad inválida (DataIntegrityFilter)", async () => {
+    req.body = { customerId: "cust-001", items: [{ productId: "prod-101", quantity: 0 }] };
+    orderService.processOrder.mockResolvedValue({
+      success: false,
+      finalOrder: { id: "4", status: "rejected" },
+      filterResults: [
+        { name: "DataIntegrityFilter", success: false, errors: ["Cantidad inválida"], warnings: [] }
+      ],
+      failedAt: "DataIntegrityFilter",
+      executionTime: 5,
+    });
+    await process(orderService)(req as Request, res as Response);
+    expect(orderService.processOrder).toHaveBeenCalledWith(req.body);
+    expect(statusMock).toHaveBeenCalledWith(200);
+    expect(jsonMock).toHaveBeenCalledWith({
+      result: expect.objectContaining({
+        sucess: false,
+        finalOrder: { id: "4", status: "rejected" },
+        failedAt: "DataIntegrityFilter",
+        filterResults: [
+          expect.objectContaining({
+            name: "DataIntegrityFilter",
+            success: false,
+            errors: expect.arrayContaining(["Cantidad inválida"]),
+            warning: [],
+          })
+        ]
+      })
+    });
+  });
+
+  it("should fail on producto inexistente (ProductValidationFilter)", async () => {
+    req.body = { customerId: "cust-001", items: [{ productId: "prod-invalido", quantity: 1 }] };
+    orderService.processOrder.mockResolvedValue({
+      success: false,
+      finalOrder: { id: "5", status: "rejected" },
+      filterResults: [
+        { name: "ProductValidationFilter", success: false, errors: ["Producto no encontrado"], warnings: [] }
+      ],
+      failedAt: "ProductValidationFilter",
+      executionTime: 5,
+    });
+    await process(orderService)(req as Request, res as Response);
+    expect(orderService.processOrder).toHaveBeenCalledWith(req.body);
+    expect(statusMock).toHaveBeenCalledWith(200);
+    expect(jsonMock).toHaveBeenCalledWith({
+      result: expect.objectContaining({
+        sucess: false,
+        finalOrder: { id: "5", status: "rejected" },
+        failedAt: "ProductValidationFilter",
+        filterResults: [
+          expect.objectContaining({
+            name: "ProductValidationFilter",
+            success: false,
+            errors: expect.arrayContaining(["Producto no encontrado"]),
+            warning: [],
+          })
+        ]
+      })
+    });
+  });
+
+  it("should fail on stock insuficiente (ProductValidationFilter)", async () => {
+    req.body = { customerId: "cust-001", items: [{ productId: "prod-sinstock", quantity: 1 }] };
+    orderService.processOrder.mockResolvedValue({
+      success: false,
+      finalOrder: { id: "6", status: "rejected" },
+      filterResults: [
+        { name: "ProductValidationFilter", success: false, errors: ["Stock insuficiente"], warnings: [] }
+      ],
+      failedAt: "ProductValidationFilter",
+      executionTime: 5,
+    });
+    await process(orderService)(req as Request, res as Response);
+    expect(orderService.processOrder).toHaveBeenCalledWith(req.body);
+    expect(statusMock).toHaveBeenCalledWith(200);
+    expect(jsonMock).toHaveBeenCalledWith({
+      result: expect.objectContaining({
+        sucess: false,
+        finalOrder: { id: "6", status: "rejected" },
+        failedAt: "ProductValidationFilter",
+        filterResults: [
+          expect.objectContaining({
+            name: "ProductValidationFilter",
+            success: false,
+            errors: expect.arrayContaining(["Stock insuficiente"]),
+            warning: [],
+          })
+        ]
+      })
+    });
+  });
+
+  it("should fail on producto sin precio (PriceCalculationFilter)", async () => {
+    req.body = { customerId: "cust-001", items: [{ productId: "prod-sinprecio", quantity: 1 }] };
+    orderService.processOrder.mockResolvedValue({
+      success: false,
+      finalOrder: { id: "7", status: "rejected" },
+      filterResults: [
+        { name: "PriceCalculationFilter", success: false, errors: ["Producto sin precio"], warnings: [] }
+      ],
+      failedAt: "PriceCalculationFilter",
+      executionTime: 5,
+    });
+    await process(orderService)(req as Request, res as Response);
+    expect(orderService.processOrder).toHaveBeenCalledWith(req.body);
+    expect(statusMock).toHaveBeenCalledWith(200);
+    expect(jsonMock).toHaveBeenCalledWith({
+      result: expect.objectContaining({
+        sucess: false,
+        finalOrder: { id: "7", status: "rejected" },
+        failedAt: "PriceCalculationFilter",
+        filterResults: [
+          expect.objectContaining({
+            name: "PriceCalculationFilter",
+            success: false,
+            errors: expect.arrayContaining(["Producto sin precio"]),
+            warning: [],
+          })
+        ]
+      })
+    });
+  });
+
+  it("should fail on cliente sin membresía válida (MembershipDiscountFilter)", async () => {
+    req.body = { customerId: "cust-nomem", items: [{ productId: "prod-101", quantity: 1 }] };
+    orderService.processOrder.mockResolvedValue({
+      success: false,
+      finalOrder: { id: "8", status: "rejected" },
+      filterResults: [
+        { name: "MembershipDiscountFilter", success: false, errors: ["Cliente sin membresía válida"], warnings: [] }
+      ],
+      failedAt: "MembershipDiscountFilter",
+      executionTime: 5,
+    });
+    await process(orderService)(req as Request, res as Response);
+    expect(orderService.processOrder).toHaveBeenCalledWith(req.body);
+    expect(statusMock).toHaveBeenCalledWith(200);
+    expect(jsonMock).toHaveBeenCalledWith({
+      result: expect.objectContaining({
+        sucess: false,
+        finalOrder: { id: "8", status: "rejected" },
+        failedAt: "MembershipDiscountFilter",
+        filterResults: [
+          expect.objectContaining({
+            name: "MembershipDiscountFilter",
+            success: false,
+            errors: expect.arrayContaining(["Cliente sin membresía válida"]),
+            warning: [],
+          })
+        ]
+      })
+    });
+  });
+
+  it("should fail on dirección de cliente incompleta (TaxCalculationFilter)", async () => {
+    req.body = { customerId: "cust-tax-invalido", items: [{ productId: "prod-101", quantity: 1 }] };
+    orderService.processOrder.mockResolvedValue({
+      success: false,
+      finalOrder: { id: "9", status: "rejected" },
+      filterResults: [
+        { name: "TaxCalculationFilter", success: false, errors: ["Dirección de cliente incompleta"], warnings: [] }
+      ],
+      failedAt: "TaxCalculationFilter",
+      executionTime: 5,
+    });
+    await process(orderService)(req as Request, res as Response);
+    expect(orderService.processOrder).toHaveBeenCalledWith(req.body);
+    expect(statusMock).toHaveBeenCalledWith(200);
+    expect(jsonMock).toHaveBeenCalledWith({
+      result: expect.objectContaining({
+        sucess: false,
+        finalOrder: { id: "9", status: "rejected" },
+        failedAt: "TaxCalculationFilter",
+        filterResults: [
+          expect.objectContaining({
+            name: "TaxCalculationFilter",
+            success: false,
+            errors: expect.arrayContaining(["Dirección de cliente incompleta"]),
+            warning: [],
+          })
+        ]
+      })
     });
   });
 });

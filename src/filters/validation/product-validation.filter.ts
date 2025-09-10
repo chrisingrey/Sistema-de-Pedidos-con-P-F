@@ -13,21 +13,11 @@ export class ProductValidationFilter implements OrderFilter {
   ): Promise<FilterResult> {
     const errors: string[] = [];
     const products = context.products;
-
-    for (const item of order.items) {
-      const product = products.find((p: Product) => p.id === item.productId);
-
-      if (!product) {
-        errors.push(`Product with ID ${item.productId} does not exist.`);
-      } else {
-        if (product.stock < item.quantity) {
-          errors.push(
-            `Insufficient stock for product ${item.productId}. Requested: ${item.quantity}, Available: ${product.stock}`
-          );
-        }
-      }
-    }
-
+    order.items.forEach((item) => {
+      const product = products.find((p) => p.id === item.productId);
+      if (!product) errors.push(`Product with ID ${item.productId} does not exist.`);
+      else if (product.stock < item.quantity) errors.push(`Insufficient stock for product ${item.productId}.`);
+    });
     return {
       success: errors.length === 0,
       order,

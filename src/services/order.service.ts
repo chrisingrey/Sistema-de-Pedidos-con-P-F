@@ -7,17 +7,14 @@ import { OrderRepository } from "../repositories/order.repository";
 import { NotFoundError } from "../errors/errors";
 import FilterResult from "../filters/filter-result";
 
-export class OrderService {
-  private validationPipeline: OrderPipeline;
-  private pricingPipeline: OrderPipeline;
 
-  constructor(
-    validationPipeline: OrderPipeline,
-    pricingPipeline: OrderPipeline
-  ) {
-    this.validationPipeline = validationPipeline;
-    this.pricingPipeline = pricingPipeline;
+export class OrderService {
+  private pipeline: OrderPipeline;
+
+  constructor(pipeline: OrderPipeline) {
+    this.pipeline = pipeline;
   }
+
 
   async processOrder(
     orderData: Omit<
@@ -39,49 +36,27 @@ export class OrderService {
       customerId: orderData.customerId,
     };
 
-    const validationResult = await this.validationPipeline.process(
+    const pipelineResult = await this.pipeline.process(
       order,
       PipelineService.getPipelineConfig()
     );
 
-    let pricingResult: PipelineResult | null = null;
-    let allFilterResults: FilterResult[] = [...validationResult.filterResults];
-    let finalOrder = validationResult.finalOrder;
-    let success = validationResult.success;
-    let failedAt = validationResult.failedAt;
-    let executionTime = validationResult.executionTime;
-
-    // Si la validación fue exitosa, ejecutar pricing, pero siempre devolver todos los resultados
-    if (validationResult.success) {
-      pricingResult = await this.pricingPipeline.process(
-        validationResult.finalOrder,
-        PipelineService.getPipelineConfig()
-      );
-      allFilterResults = [
-        ...validationResult.filterResults,
-        ...pricingResult.filterResults,
-      ];
-      finalOrder = pricingResult.finalOrder;
-      success = pricingResult.success;
-      failedAt = pricingResult.failedAt;
-      executionTime += pricingResult.executionTime;
-    }
-
-    finalOrder.status = success ? "completed" : "rejected";
+    const finalOrder = pipelineResult.finalOrder;
+    finalOrder.status = pipelineResult.success ? "completed" : "rejected";
     OrderRepository.create({
       ...finalOrder,
       metadata: {
         ...finalOrder.metadata,
-        filterResults: allFilterResults,
+        filterResults: pipelineResult.filterResults,
       },
     });
 
     return {
-      success,
+      success: pipelineResult.success,
       finalOrder,
-      filterResults: allFilterResults,
-      executionTime,
-      failedAt,
+      filterResults: pipelineResult.filterResults,
+      executionTime: pipelineResult.executionTime,
+      failedAt: pipelineResult.failedAt,
     };
   }
 

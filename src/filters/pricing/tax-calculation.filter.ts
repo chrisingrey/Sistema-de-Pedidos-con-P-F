@@ -18,6 +18,27 @@ export class TaxCalculationFilter implements OrderFilter {
     const updatedOrder = { ...order };
     const products = context.products as Product[];
     let taxes = 0;
+    const errors: string[] = [];
+
+    // Validar dirección del cliente
+    const customer = context.customer;
+    if (!customer || !customer.address) {
+      errors.push("Customer or address not found for tax calculation.");
+    } else {
+      const { street, city, country, state, zipCode } = customer.address;
+      if (!street || !city || !country || !state || !zipCode) {
+        errors.push("Customer address is incomplete for tax calculation.");
+      }
+    }
+
+    if (errors.length > 0) {
+      return {
+        success: false,
+        order: updatedOrder,
+        errors,
+        warnings: [],
+      };
+    }
 
     const totalDiscounts =
       updatedOrder.discounts?.reduce((sum, d) => sum + d.value, 0) || 0;

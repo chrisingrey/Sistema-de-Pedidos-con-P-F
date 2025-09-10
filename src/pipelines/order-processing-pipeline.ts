@@ -32,45 +32,39 @@ export class OrderProcessingPipeline implements OrderPipeline {
     const startTime = Date.now();
     const filterResults = [];
     let currentOrder = { ...order };
-    const context: ProcessingContext = { products: ProductRepository.getAll() };
-    try {
-      for (const filter of this.filters) {
-        if (config.enabledFilters.includes(filter.name)) {
-          const result: FilterResult = await filter.process(
-            currentOrder,
-            context
-          );
-          filterResults.push({ name: filter.name, ...result });
-
-          if (!result.success) {
-            currentOrder.status = "rejected";
-            return {
-              success: false,
-              finalOrder: currentOrder,
-              filterResults,
-              executionTime: Date.now() - startTime,
-              failedAt: filter.name,
-            };
-          }
+    let failedAt: string | undefined = undefined;
+    let success = true;
+  const context: ProcessingContext = {
+    products: ProductRepository.getAll(),
+  };
+  if (order.customerId) {
+    const { CustomerRepository } = await import("../repositories/customer.repository");
+    const customer = CustomerRepository.findById(order.customerId);
+    if (customer) context.customer = customer;
+  }
+    for (const filter of this.filters) {
+      if (config.enabledFilters.includes(filter.name)) {
+        const result: FilterResult = await filter.process(
+          currentOrder,
+          context
+        );
+        filterResults.push({ name: filter.name, ...result });
+        if (!result.success) {
+          failedAt = filter.name;
+          success = false;
           currentOrder = result.order;
+          break;
         }
+        currentOrder = result.order;
       }
-      currentOrder.status = "completed";
-      return {
-        success: true,
-        finalOrder: currentOrder,
-        filterResults,
-        executionTime: Date.now() - startTime,
-      };
-    } catch (error: any) {
-      currentOrder.status = "rejected";
-      return {
-        success: false,
-        finalOrder: currentOrder,
-        filterResults,
-        executionTime: Date.now() - startTime,
-        failedAt: error.message,
-      };
     }
+    currentOrder.status = success ? "completed" : "rejected";
+    return {
+      success,
+      finalOrder: currentOrder,
+      filterResults,
+      executionTime: Date.now() - startTime,
+      failedAt,
+    };
   }
 }

@@ -1,3 +1,10 @@
+# Tabla de Contenido
+
+- [Crear un pedido](#crear-un-pedido)
+- [Consultar estado de un pedido](#consultar-estado-de-un-pedido)
+- [Obtener configuración del pipeline](#obtener-configuración-del-pipeline)
+- [Actualizar configuración del pipeline](#actualizar-configuración-del-pipeline)
+
 # Endpoints
 
 ## Crear un pedido
@@ -48,14 +55,119 @@ Respuestas:
 409 Conflict: Ya existe un pedido igual.
 500 Internal Server Error: Ocurrió un error inesperado en el servidor.
 
-Ejemplo de solicitud:
 
+Ejemplo de solicitud válida:
 ```json
 {
   "customerId": "cust-001",
   "items": [
     { "productId": "prod-101", "quantity": 2 },
     { "productId": "prod-102", "quantity": 1 }
+  ]
+}
+```
+
+### Ejemplos de órdenes que deberían fallar según cada filtro
+
+#### Filtro: Validación de cliente
+Cliente inexistente:
+```json
+{
+  "customerId": "cliente-invalido",
+  "items": [
+    { "productId": "prod-101", "quantity": 1 }
+  ]
+}
+```
+
+#### Filtro: Integridad de datos
+Falta el campo items:
+```json
+{
+  "customerId": "cust-001"
+}
+```
+Cantidad inválida:
+```json
+{
+  "customerId": "cust-001",
+  "items": [
+    { "productId": "prod-101", "quantity": 0 }
+  ]
+}
+```
+
+#### Filtro: Validación de productos
+Producto inexistente:
+```json
+{
+  "customerId": "cust-001",
+  "items": [
+    { "productId": "prod-invalido", "quantity": 1 }
+  ]
+}
+```
+Stock insuficiente:
+```json
+{
+  "customerId": "cust-001",
+  "items": [
+    { "productId": "prod-sinstock", "quantity": 1 }
+  ]
+}
+```
+
+#### Filtro: Cálculo de precios
+Producto sin precio:
+```json
+{
+  "customerId": "cust-001",
+  "items": [
+    { "productId": "prod-sinprecio", "quantity": 1 }
+  ]
+}
+```
+
+#### Filtro: Descuento por membresía
+Cliente sin membresía válida:
+```json
+{
+  "customerId": "cust-nomem",
+  "items": [
+    { "productId": "prod-101", "quantity": 1 }
+  ]
+}
+```
+
+
+#### Filtro: Descuento por volumen (VolumeDiscountFilter)
+Pedido con más de 10 ítems:
+```json
+{
+  "customerId": "cust-001",
+  "items": [
+    { "productId": "prod-101", "quantity": 11 }
+  ]
+}
+```
+Pedido con subtotal mayor a $1000:
+```json
+{
+  "customerId": "cust-001",
+  "items": [
+    { "productId": "prod-101", "quantity": 1 },
+    { "productId": "prod-102", "quantity": 40 }
+  ]
+}
+```
+
+#### Filtro: Cálculo de impuestos
+Dirección de cliente incompleta:
+```json
+{
+  "customerId": "cust-tax-invalido",
+  "items": [
+    { "productId": "prod-101", "quantity": 1 }
   ]
 }
 ```
@@ -74,15 +186,22 @@ Respuestas:
 
 200 OK: El pedido fue encontrado.
 
+Ejemplo de respuesta:
 ```json
 {
-  "status": "pending|string|completed|rejected",
+  "status": "completed",
   "filterResults": [
     {
-      "name": string,
-      "success": boolean,
-      "errors": ["string"],
-      "warnings": ["string"]
+      "name": "CustomerValidationFilter",
+      "success": true,
+      "errors": [],
+      "warning": []
+    },
+    {
+      "name": "PriceCalculationFilter",
+      "success": true,
+      "errors": [],
+      "warning": []
     }
   ]
 }
@@ -104,9 +223,18 @@ Respuestas:
 
 200 OK:
 
+Ejemplo de respuesta:
 ```json
 {
-  "enabledFilters": ["string"]
+  "enabledFilters": [
+    "CustomerValidationFilter",
+    "DataIntegrityFilter",
+    "ProductValidationFilter",
+    "PriceCalculationFilter",
+    "MembershipDiscountFilter",
+    "TaxCalculationFilter",
+    "VolumeDiscountFilter"
+  ]
 }
 ```
 
@@ -124,17 +252,7 @@ Respuestas:
 
 200 OK:
 
-```json
-{
-  "enabledFilters": ["string"]
-}
-```
-
-400 Bad Request: Datos inválidos.
-500 Internal Server Error: Ocurrió un error inesperado en el servidor.
-
-Ejemplo de solicitud:
-
+Ejemplo de respuesta:
 ```json
 {
   "enabledFilters": [
@@ -143,7 +261,26 @@ Ejemplo de solicitud:
     "ProductValidationFilter",
     "PriceCalculationFilter",
     "MembershipDiscountFilter",
-    "TaxCalculationFilter"
+    "TaxCalculationFilter",
+    "VolumeDiscountFilter"
+  ]
+}
+```
+
+400 Bad Request: Datos inválidos.
+500 Internal Server Error: Ocurrió un error inesperado en el servidor.
+
+Ejemplo de solicitud:
+```json
+{
+  "enabledFilters": [
+    "CustomerValidationFilter",
+    "DataIntegrityFilter",
+    "ProductValidationFilter",
+    "PriceCalculationFilter",
+    "MembershipDiscountFilter",
+    "TaxCalculationFilter",
+    "VolumeDiscountFilter"
   ]
 }
 ```

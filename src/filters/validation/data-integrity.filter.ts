@@ -11,25 +11,16 @@ export class DataIntegrityFilter implements OrderFilter {
     context: ProcessingContext
   ): Promise<FilterResult> {
     const errors: string[] = [];
-
     if (!order.customerId) errors.push("Order must have a customer ID.");
-
-    if (order.items.length == 0)
-      errors.push("Order must have at leat one item.");
-
-    for (const item of order.items) {
-      if (!item.productId)
-        errors.push(`Item: ${JSON.stringify(item)} must contain product id`);
-
-      if (typeof item.quantity !== "number")
-        errors.push(`Item: ${JSON.stringify(item)} quantity must be a number`);
-
-      if (item.quantity <= 0)
-        errors.push(
-          `Item: ${JSON.stringify(item)} quantity must be greater than 0`
-        );
+    if (!order.items || !Array.isArray(order.items) || order.items.length === 0) {
+      errors.push("Order must have at least one item.");
+    } else {
+      order.items.forEach((item) => {
+        if (!item.productId) errors.push("Order item must have a product id.");
+        if (typeof item.quantity !== "number") errors.push("Order item quantity must be a number.");
+        else if (item.quantity <= 0) errors.push("Order item quantity must be greater than 0.");
+      });
     }
-
     return {
       success: errors.length === 0,
       order,

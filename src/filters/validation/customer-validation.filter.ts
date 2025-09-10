@@ -11,17 +11,20 @@ export class CustomerValidationFilter implements OrderFilter {
     order: Order,
     context: ProcessingContext
   ): Promise<FilterResult> {
-    const customer = CustomerRepository.findById(order.customerId);
     const errors: string[] = [];
-
-    if (!customer) {
-      errors.push(`Customer with ID ${order.customerId} does not exist.`);
-    } else {
-      if (!customer.isActive)
-        errors.push(`Customer with ID ${order.customerId} is not active.`);
-    }
-    if (errors.length == 0) {
-      context.customer = customer;
+    try {
+      const customer = CustomerRepository.findById(order.customerId);
+      if (!customer) {
+        errors.push(`Customer with ID ${order.customerId} does not exist.`);
+      } else {
+        if (!customer.isActive)
+          errors.push(`Customer with ID ${order.customerId} is not active.`);
+      }
+      if (errors.length == 0) {
+        context.customer = customer;
+      }
+    } catch (e: any) {
+      errors.push(`${e.message}`);
     }
     return {
       success: errors.length === 0,

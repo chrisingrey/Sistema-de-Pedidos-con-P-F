@@ -15,18 +15,17 @@ import errorHandler from "./src/middleware/error-handler";
 dotenv.config();
 const port = process.env.PORT || 3000;
 
-const validationPipeline = new OrderProcessingPipeline();
-validationPipeline.addFilter(new CustomerValidationFilter());
-validationPipeline.addFilter(new DataIntegrityFilter());
-validationPipeline.addFilter(new ProductValidationFilter());
 
-const pricingPipeline = new OrderProcessingPipeline();
-pricingPipeline.addFilter(new MembershipDiscountFilter());
-pricingPipeline.addFilter(new PriceCalculationFilter());
-pricingPipeline.addFilter(new TaxCalculationFilter());
-pricingPipeline.addFilter(new VolumeDiscountFilter());
+const pipeline = new OrderProcessingPipeline();
+pipeline.addFilter(new CustomerValidationFilter());
+pipeline.addFilter(new DataIntegrityFilter());
+pipeline.addFilter(new ProductValidationFilter());
+pipeline.addFilter(new PriceCalculationFilter());
+pipeline.addFilter(new MembershipDiscountFilter());
+pipeline.addFilter(new TaxCalculationFilter());
+pipeline.addFilter(new VolumeDiscountFilter());
 
-const orderService = new OrderService(validationPipeline, pricingPipeline);
+const orderService = new OrderService(pipeline);
 
 const app = express();
 app.use(express.json());

@@ -21,7 +21,7 @@ describe("DataIntegrityFilter", () => {
   it("should fail if no items", async () => {
   const result = await filter.process({ ...baseOrder, items: [] }, context);
     expect(result.success).toBe(false);
-    expect(result.errors[0]).toContain("at leat one item");
+    expect(result.errors[0]).toContain("at least one item");
   });
 
   it("should fail if item missing productId", async () => {

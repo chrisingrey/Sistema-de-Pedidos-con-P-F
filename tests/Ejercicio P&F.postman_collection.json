@@ -1,0 +1,140 @@
+{
+	"info": {
+		"_postman_id": "50af61a1-50b3-4157-aa7a-fede526a91ad",
+		"name": "Ejercicio P&F",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_exporter_id": "38557259"
+	},
+	"item": [
+		{
+			"name": "Pipeline",
+			"item": [
+				{
+					"name": "Obtener la Configuracion del Pipeline",
+					"protocolProfileBehavior": {
+						"disableBodyPruning": true
+					},
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "GET",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": ""
+						},
+						"url": {
+							"raw": "{{URL}}/pipeline/config",
+							"host": [
+								"{{URL}}"
+							],
+							"path": [
+								"pipeline",
+								"config"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Configurar pipeline",
+					"request": {
+						"method": "PUT",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n  \"enabledFilters\": [\r\n    \"CustomerValidationFilter\",\r\n    \"DataIntegrityFilter\",\r\n    \"ProductValidationFilter\",\r\n    \"PriceCalculationFilter\",\r\n    \"MembershipDiscountFilter\",\r\n    \"TaxCalculationFilter\"\r\n  ]\r\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{URL}}/pipeline/config",
+							"host": [
+								"{{URL}}"
+							],
+							"path": [
+								"pipeline",
+								"config"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Order",
+			"item": [
+				{
+					"name": "Process new order",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n  \"customerId\": \"cust-001\",\r\n  \"items\": [\r\n    { \"productId\": \"prod-101\", \"quantity\": 2 },\r\n    { \"productId\": \"prod-102\", \"quantity\": 1 }\r\n  ]\r\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{URL}}/orders/process",
+							"host": [
+								"{{URL}}"
+							],
+							"path": [
+								"orders",
+								"process"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Estado de la orden",
+					"protocolProfileBehavior": {
+						"disableBodyPruning": true
+					},
+					"request": {
+						"method": "GET",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": ""
+						},
+						"url": {
+							"raw": "{{URL}}/orders/{{orderId}}/status",
+							"host": [
+								"{{URL}}"
+							],
+							"path": [
+								"orders",
+								"{{orderId}}",
+								"status"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		}
+	],
+	"variable": [
+		{
+			"key": "URL",
+			"value": "",
+			"type": "default"
+		},
+		{
+			"key": "orderId",
+			"value": "",
+			"type": "default"
+		}
+	]
+}

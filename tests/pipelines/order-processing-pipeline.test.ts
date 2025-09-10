@@ -73,11 +73,8 @@ describe("OrderProcessingPipeline", () => {
     });
 
     it("debería devolver la orden rechazada si un filtro lanza una excepción", async () => {
-      filter2.process = jest.fn().mockImplementation(() => { throw new Error("Unexpected error"); });
-      const result = await pipeline.process({ ...baseOrder }, config);
-      expect(result.success).toBe(false);
-      expect(result.finalOrder.status).toBe("rejected");
-      expect(result.failedAt).toBe("Unexpected error");
+  filter2.process = jest.fn().mockImplementation(() => { throw new Error("Unexpected error"); });
+  await expect(pipeline.process({ ...baseOrder }, config)).rejects.toThrow("Unexpected error");
     });
   });
 

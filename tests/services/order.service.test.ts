@@ -8,26 +8,19 @@ jest.mock("../../src/repositories/order.repository");
 jest.mock("../../src/services/pipeline.service");
 
 describe("OrderService", () => {
-  let validationPipeline: OrderPipeline;
-  let pricingPipeline: OrderPipeline;
+  let pipeline: OrderPipeline;
   let orderService: OrderService;
   let baseOrderData: any;
 
   beforeEach(() => {
     jest.clearAllMocks();
-    validationPipeline = {
+    pipeline = {
       filters: [],
       addFilter: jest.fn(),
       removeFilter: jest.fn(),
       process: jest.fn(),
     };
-    pricingPipeline = {
-      filters: [],
-      addFilter: jest.fn(),
-      removeFilter: jest.fn(),
-      process: jest.fn(),
-    };
-    orderService = new OrderService(validationPipeline, pricingPipeline);
+    orderService = new OrderService(pipeline);
     baseOrderData = {
       customerId: "cust-001",
       items: [
@@ -38,21 +31,42 @@ describe("OrderService", () => {
     (PipelineService.getPipelineConfig as jest.Mock).mockReturnValue({ enabledFilters: [] });
   });
 
+  it("should accumulate all filter results even if some fail (no short-circuit)", async () => {
+  (pipeline.process as jest.Mock).mockResolvedValue({
+      success: false,
+      finalOrder: { ...baseOrderData },
+      filterResults: [
+        { name: "ValidationFilter", success: true },
+        { name: "DataIntegrityFilter", success: false },
+        { name: "ProductValidationFilter", success: false }
+      ],
+      failedAt: "DataIntegrityFilter",
+      executionTime: 7,
+    });
+    (OrderRepository.create as jest.Mock).mockReturnValue(undefined);
+    const result = await orderService.processOrder(baseOrderData);
+    expect(result.success).toBe(false);
+    expect(OrderRepository.create).toHaveBeenCalled();
+    expect(result.finalOrder.status).toBe("rejected");
+    expect(result.filterResults).toEqual([
+      { name: "ValidationFilter", success: true },
+      { name: "DataIntegrityFilter", success: false },
+      { name: "ProductValidationFilter", success: false }
+    ]);
+    expect(result.failedAt).toBe("DataIntegrityFilter");
+    expect(result.executionTime).toBe(7);
+  });
 
   it("should process order successfully when all pipelines succeed", async () => {
-    (validationPipeline.process as jest.Mock).mockResolvedValue({
+    (pipeline.process as jest.Mock).mockResolvedValue({
       success: true,
       finalOrder: { ...baseOrderData },
-      filterResults: [{ name: "ValidationFilter", success: true }],
+      filterResults: [
+        { name: "ValidationFilter", success: true },
+        { name: "PricingFilter", success: true }
+      ],
       failedAt: null,
-      executionTime: 10,
-    });
-    (pricingPipeline.process as jest.Mock).mockResolvedValue({
-      success: true,
-      finalOrder: { ...baseOrderData },
-      filterResults: [{ name: "PricingFilter", success: true }],
-      failedAt: null,
-      executionTime: 5,
+      executionTime: 15,
     });
     (OrderRepository.create as jest.Mock).mockReturnValue(undefined);
     const result = await orderService.processOrder(baseOrderData);
@@ -68,7 +82,7 @@ describe("OrderService", () => {
 
 
   it("should reject order if validation pipeline fails", async () => {
-    (validationPipeline.process as jest.Mock).mockResolvedValue({
+  (pipeline.process as jest.Mock).mockResolvedValue({
       success: false,
       finalOrder: { ...baseOrderData },
       filterResults: [{ name: "ValidationFilter", success: false }],
@@ -88,19 +102,15 @@ describe("OrderService", () => {
 
 
   it("should reject order if pricing pipeline fails", async () => {
-    (validationPipeline.process as jest.Mock).mockResolvedValue({
-      success: true,
-      finalOrder: { ...baseOrderData },
-      filterResults: [{ name: "ValidationFilter", success: true }],
-      failedAt: null,
-      executionTime: 8,
-    });
-    (pricingPipeline.process as jest.Mock).mockResolvedValue({
+    (pipeline.process as jest.Mock).mockResolvedValue({
       success: false,
       finalOrder: { ...baseOrderData },
-      filterResults: [{ name: "PricingFilter", success: false }],
+      filterResults: [
+        { name: "ValidationFilter", success: true },
+        { name: "PricingFilter", success: false }
+      ],
       failedAt: "PricingFilter",
-      executionTime: 4,
+      executionTime: 12,
     });
     (OrderRepository.create as jest.Mock).mockReturnValue(undefined);
     const result = await orderService.processOrder(baseOrderData);
