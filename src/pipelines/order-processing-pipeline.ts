@@ -1,4 +1,3 @@
-import { NotFoundError } from "../errors/errors";
 import PipelineConfig from "./pipeline-config";
 import PipelineResult from "./pipeline-result";
 import OrderPipeline from "./order-pipeline";

@@ -14,10 +14,10 @@ var config: PipelineConfig = {
     new CustomerValidationFilter().name,
     new DataIntegrityFilter().name,
     new ProductValidationFilter().name,
-    // new PriceCalculationFilter().name,
-    // new MembershipDiscountFilter().name,
-    // new VolumeDiscountFilter().name,
-    // new TaxCalculationFilter().name,
+    new PriceCalculationFilter().name,
+    new MembershipDiscountFilter().name,
+    new VolumeDiscountFilter().name,
+    new TaxCalculationFilter().name,
   ],
 };
 

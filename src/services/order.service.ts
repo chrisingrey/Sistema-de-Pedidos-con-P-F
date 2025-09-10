@@ -4,6 +4,8 @@ import Order from "../models/order.model";
 import PipelineResult from "../pipelines/pipeline-result";
 import { PipelineService } from "./pipeline.service";
 import { OrderRepository } from "../repositories/order.repository";
+import { NotFoundError } from "../errors/errors";
+import FilterResult from "../filters/filter-result";
 
 export class OrderService {
   private validationPipeline: OrderPipeline;
@@ -37,33 +39,58 @@ export class OrderService {
       customerId: orderData.customerId,
     };
 
-    let result: PipelineResult;
-
     const validationResult = await this.validationPipeline.process(
       order,
       PipelineService.getPipelineConfig()
     );
 
-    if (!validationResult.success) {
-      result = validationResult;
-    } else {
-      const pricingResult = await this.pricingPipeline.process(
+    let pricingResult: PipelineResult | null = null;
+    let allFilterResults: FilterResult[] = [...validationResult.filterResults];
+    let finalOrder = validationResult.finalOrder;
+    let success = validationResult.success;
+    let failedAt = validationResult.failedAt;
+    let executionTime = validationResult.executionTime;
+
+    // Si la validación fue exitosa, ejecutar pricing, pero siempre devolver todos los resultados
+    if (validationResult.success) {
+      pricingResult = await this.pricingPipeline.process(
         validationResult.finalOrder,
         PipelineService.getPipelineConfig()
       );
-      result = pricingResult;
+      allFilterResults = [
+        ...validationResult.filterResults,
+        ...pricingResult.filterResults,
+      ];
+      finalOrder = pricingResult.finalOrder;
+      success = pricingResult.success;
+      failedAt = pricingResult.failedAt;
+      executionTime += pricingResult.executionTime;
     }
 
-    if (result.success) {
-      result.finalOrder.status = "completed";
-      // Guarda la orden final en el repositorio.
-      OrderRepository.create(result.finalOrder);
-    } else {
-      result.finalOrder.status = "rejected";
-      // Guarda la orden final en el repositorio.
-      OrderRepository.create(result.finalOrder);
-    }
+    finalOrder.status = success ? "completed" : "rejected";
+    OrderRepository.create({
+      ...finalOrder,
+      metadata: {
+        ...finalOrder.metadata,
+        filterResults: allFilterResults,
+      },
+    });
 
-    return result;
+    return {
+      success,
+      finalOrder,
+      filterResults: allFilterResults,
+      executionTime,
+      failedAt,
+    };
+  }
+
+  getOrderStatus(orderId: string): {
+    order: Order;
+    filterResults: FilterResult[];
+  } {
+    const order = OrderRepository.findById(orderId);
+    if (!order) throw new NotFoundError("Order not found");
+    return { order, filterResults: order.metadata?.filterResults };
   }
 }
